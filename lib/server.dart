@@ -144,8 +144,11 @@ class OperationsHandler extends QuestionHandler {
   }
 
   String formatNumber(num number) {
-    if(number == 0 || !number.toString().contains('e')){
+    if(number is int && !number.toString().contains('e')){
       return number.toString().replaceAll('.', ',');
+    }
+    if(number == 0.0){
+      return '0';
     }
     final integerDigits = new List<int>();
     int integerPart = number.truncate().toInt().abs();
