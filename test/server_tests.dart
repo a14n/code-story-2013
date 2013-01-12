@@ -72,7 +72,7 @@ main() {
     expect(q.handleQuestion('${question}fail'), equals(false));
     expect(q.answer(question), equals(answer));
   });
-  test('q7', () {
+  test('operations', () {
     final q = new OperationsHandler();
     final map = {
       'q=1+1': '2',
@@ -102,5 +102,13 @@ main() {
         expect(q.handleQuestion(question), equals(false));
       }
     });
+  });
+  test('q7', () {
+    final q = new Q7Handler();
+    final question = '?q=As+tu+passe+une+bonne+nuit+malgre+les+bugs+de+l+etape+precedente(PAS_TOP/BOF/QUELS_BUGS)';
+    final answer = 'PAS_TOP';
+    expect(q.handleQuestion(question), equals(true));
+    expect(q.handleQuestion('${question}fail'), equals(false));
+    expect(q.answer(question), equals(answer));
   });
 }

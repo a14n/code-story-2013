@@ -12,6 +12,7 @@ void launchServer() {
   final port = portEnv != null ? int.parse(portEnv) : 8080;
   server.listen(host, port);
 
+  new Q7Handler().register(server);
   new OperationsHandler().register(server);
   new Q6Handler().register(server);
   new Enonce1Handler().register(server);
@@ -203,6 +204,11 @@ class OperationsHandler extends QuestionHandler {
       }
     }
   }
+}
+
+class Q7Handler extends QuestionHandler {
+  bool handleQuestion(String queryString) => queryString == '?q=As+tu+passe+une+bonne+nuit+malgre+les+bugs+de+l+etape+precedente(PAS_TOP/BOF/QUELS_BUGS)';
+  String answer(String queryString) => "PAS_TOP";
 }
 
 class PostHandler extends Handler {
