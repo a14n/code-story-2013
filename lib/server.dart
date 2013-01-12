@@ -322,6 +322,7 @@ class Enonce2Handler extends Handler {
   bool accept(HttpRequest request) => request.method.toUpperCase() == 'POST' && request.path == '/jajascript/optimize';
   void handle(HttpRequest request, HttpResponse response) {
     readStreamAsString(request.inputStream).then((content) {
+      print("json of enonce 2 : ${content.replaceAll('\n', '<aa:br/>')}");
       final List json = JSON.parse(content);
       final List<Order> orders = json.map((e) => new Order(e['VOL'], e['DEPART'], e['DUREE'], e['PRIX']));
       orders.sort((e1, e2) => e1.depart.compareTo(e2.depart));
