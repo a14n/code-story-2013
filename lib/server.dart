@@ -172,7 +172,7 @@ class OperationsHandler extends QuestionHandler {
   }
 
   num resolve(String s) {
-    print("parse ${s}");
+    // print("parse ${s}");
     final closing = new Closing(s);
     if (closing.match()) {
       final middleValue = resolve(closing.middle());
