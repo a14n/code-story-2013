@@ -105,7 +105,7 @@ main() {
   });
   test('q7', () {
     final q = new Q7Handler();
-    final question = '?q=As+tu+passe+une+bonne+nuit+malgre+les+bugs+de+l+etape+precedente(PAS_TOP/BOF/QUELS_BUGS)';
+    final question = 'q=As+tu+passe+une+bonne+nuit+malgre+les+bugs+de+l+etape+precedente(PAS_TOP/BOF/QUELS_BUGS)';
     final answer = 'PAS_TOP';
     expect(q.handleQuestion(question), equals(true));
     expect(q.handleQuestion('${question}fail'), equals(false));

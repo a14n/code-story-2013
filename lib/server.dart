@@ -7,8 +7,8 @@ import 'dart:math';
 void launchServer() {
   final server = new HttpServer();
   final portEnv = Platform.environment['PORT'];
-//  final host = portEnv != null ? '0.0.0.0' : '192.168.0.11';
-  final host = portEnv != null ? '0.0.0.0' : '192.168.0.16';
+  final host = portEnv != null ? '0.0.0.0' : '192.168.0.11';
+//  final host = portEnv != null ? '0.0.0.0' : '192.168.0.16';
   final port = portEnv != null ? int.parse(portEnv) : 8080;
   server.listen(host, port);
 
@@ -207,7 +207,7 @@ class OperationsHandler extends QuestionHandler {
 }
 
 class Q7Handler extends QuestionHandler {
-  bool handleQuestion(String queryString) => queryString == '?q=As+tu+passe+une+bonne+nuit+malgre+les+bugs+de+l+etape+precedente(PAS_TOP/BOF/QUELS_BUGS)';
+  bool handleQuestion(String queryString) => queryString == 'q=As+tu+passe+une+bonne+nuit+malgre+les+bugs+de+l+etape+precedente(PAS_TOP/BOF/QUELS_BUGS)';
   String answer(String queryString) => "PAS_TOP";
 }
 
