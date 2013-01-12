@@ -144,8 +144,11 @@ class OperationsHandler extends QuestionHandler {
   }
 
   String formatNumber(num number) {
+    if(number == 0 || !number.toString().contains('e')){
+      return number.toString().replaceAll('.', ',');
+    }
     final integerDigits = new List<int>();
-    int integerPart = number.truncate().toInt();
+    int integerPart = number.truncate().toInt().abs();
     while (integerPart > 0) {
       integerDigits.insertRange(0, 1, integerPart % 10);
       integerPart = integerPart ~/ 10;
@@ -153,7 +156,7 @@ class OperationsHandler extends QuestionHandler {
 
     final integerPartString = Strings.join(integerDigits.map((e) => e.toString()), '');
 
-    final decimals = number - number.truncate();
+    final decimals = (number - number.truncate()).abs();
     if (decimals != 0) {
       String result = '${integerPartString},${((1 + decimals) * pow(10,10)).round().toInt().toString().substring(1)}';
       while(result.endsWith('0')){
@@ -162,13 +165,14 @@ class OperationsHandler extends QuestionHandler {
       if (result.endsWith(',')) {
         return result.substring(0, result.length - 1);
       }
-      return result;
+      return number < 0 ? '-$result' : result;
     } else {
-      return integerPartString;
+      return number < 0 ? '-$integerPartString' : integerPartString;
     }
   }
 
   num resolve(String s) {
+    print("parse ${s}");
     final closing = new Closing(s);
     if (closing.match()) {
       final middleValue = resolve(closing.middle());
