@@ -111,4 +111,14 @@ main() {
     expect(q.handleQuestion('${question}fail'), equals(false));
     expect(q.answer(question), equals(answer));
   });
+  test('enonce2', () {
+    final q = new Enonce2Handler();
+    final orders = new List<Order>()
+        ..add(new Order("MONAD42", 0, 5, 10))
+        ..add(new Order("META18", 3, 7, 14))
+        ..add(new Order("LEGACY01", 5, 9, 8))
+        ..add(new Order("YAGNI17", 5, 9, 7))
+        ;
+    expect(Strings.join(q.findBestTrip(orders).map((e)=>e.vol), ', '), equals("MONAD42, LEGACY01"));
+  });
 }

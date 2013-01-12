@@ -12,6 +12,8 @@ void launchServer() {
   final port = portEnv != null ? int.parse(portEnv) : 8080;
   server.listen(host, port);
 
+  new Enonce2Handler().register(server);
+  new Enonce2PostHandler().register(server);
   new Q7Handler().register(server);
   new OperationsHandler().register(server);
   new Q6Handler().register(server);
@@ -299,6 +301,71 @@ class Enonce1Handler extends Handler {
     response.statusCode = HttpStatus.BAD_REQUEST;
     response.outputStream.writeString("you said a number between 1 and 100 but '${param}' is incorrect.");
     response.outputStream.close();
+  }
+}
+
+class Enonce2PostHandler extends Handler {
+  bool accept(HttpRequest request) => request.method.toUpperCase() == 'POST' && request.path == '/enonce/2';
+  void handle(HttpRequest request, HttpResponse response) {
+    response.headers.add(HttpHeaders.LOCATION, '/jajascript/optimize');
+    response.statusCode = HttpStatus.CREATED;
+    response.outputStream.writeString("come on!");
+    response.outputStream.close();
+  }
+}
+class Order {
+  final String vol;
+  final int depart, duree, prix;
+  Order(this.vol, this.depart, this.duree, this.prix);
+}
+class Enonce2Handler extends Handler {
+  bool accept(HttpRequest request) => request.method.toUpperCase() == 'POST' && request.path == '/jajascript/optimize';
+  void handle(HttpRequest request, HttpResponse response) {
+    readStreamAsString(request.inputStream).then((content) {
+      final List json = JSON.parse(content);
+      final List<Order> orders = json.map((e) => new Order(e['VOL'], e['DEPART'], e['DUREE'], e['PRIX']));
+      orders.sort((e1, e2) => e1.depart.compareTo(e2.depart));
+      final List<Order> bestTrip = findBestTrip(orders);
+      sendResponse(response, JSON.stringify({
+        "gain" : computePrix(bestTrip),
+        "path" : bestTrip.map((e) => e.vol),
+      }));
+    });
+  }
+
+  int computePrix(List<Order> trip) => trip.reduce(0, (previousValue, e) => previousValue + e.prix);
+
+  List<Order> findBestTrip(List<Order> orders) {
+    final trips = new List<List<Order>>();
+    int minArrivee = null;
+    for (final order in orders) {
+      if (minArrivee != null && order.depart >= minArrivee) {
+        break;
+      }
+      final arrivee = order.depart + order.duree;
+
+      final trip = [order];
+      final nextAvailableOrders = orders.filter((e) => e.depart >= arrivee);
+      if (!nextAvailableOrders.isEmpty) {
+        trip.addAll(findBestTrip(nextAvailableOrders));
+      }
+      trips.add(trip);
+
+      // update min
+      minArrivee = minArrivee == null || arrivee < minArrivee ? arrivee : minArrivee;
+    }
+
+    // find best
+    int bestPrix = 0;
+    List<Order> bestTrip = null;
+    for (final trip in trips) {
+      final prix = computePrix(trip);
+      if(prix > bestPrix) {
+        bestPrix = prix;
+        bestTrip = trip;
+      }
+    }
+    return bestTrip;
   }
 }
 
