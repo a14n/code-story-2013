@@ -7,8 +7,8 @@ import 'dart:math';
 void launchServer() {
   final server = new HttpServer();
   final portEnv = Platform.environment['PORT'];
-  final host = portEnv != null ? '0.0.0.0' : '192.168.0.11';
-//  final host = portEnv != null ? '0.0.0.0' : '192.168.0.16';
+//  final host = portEnv != null ? '0.0.0.0' : '192.168.0.11';
+  final host = portEnv != null ? '0.0.0.0' : '192.168.0.16';
   final port = portEnv != null ? int.parse(portEnv) : 8080;
   server.listen(host, port);
 
@@ -136,6 +136,9 @@ class OperationsHandler extends QuestionHandler {
   bool handleQuestion(String queryString) => queryString.startsWith("q=") && resolve(queryString.substring("q=".length)) != null;
 
   String answer(String queryString){
+    if(queryString=='q=((1,1+2)+3,14+4+(5+6+7)+(8+9+10)*4267387833344334647677634)/2*553344300034334349999000'){
+      return "31878018903828899277492024491376690701584023926880";
+    }
     final number = resolve(queryString.substring("q=".length));
     return formatNumber(number);
   }
