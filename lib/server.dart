@@ -320,46 +320,25 @@ class Order {
   Order(this.vol, this.depart, this.duree, this.prix);
 }
 class Enonce2Handler extends Handler {
-  final questionsEnonce2 = new Map<int, String>();
-
-  bool accept(HttpRequest request) => request.path.startsWith('/jajascript/optimize');
+  bool accept(HttpRequest request) => request.method == 'POST' && request.path == '/jajascript/optimize';
   void handle(HttpRequest request, HttpResponse response) {
-    if (request.method == 'POST' && request.path == '/jajascript/optimize') {
-      readStreamAsString(request.inputStream).then((content) {
-        print("json of enonce 2 ${content.hashCode} : ${content.replaceAll('\n', '<aa:br/>')}");
-        questionsEnonce2[content.hashCode] = content;
+    readStreamAsString(request.inputStream).then((content) {
+      print("json of enonce 2: ${content.replaceAll('\n', '<aa:br/>')}");
 
-        // send response
-        response.statusCode = HttpStatus.CREATED;
-        response.headers.add(HttpHeaders.CONTENT_TYPE, "application/json");
-        response.headers.add(HttpHeaders.LOCATION, "/jajascript/optimize/${content.hashCode}");
-        response.outputStream.writeString("/jajascript/optimize/${content.hashCode}");
-        response.outputStream.close();
-      });
-    } else if (request.method == 'GET' && request.path.startsWith('/jajascript/optimize')) {
-      final hash = int.parse(request.path.substring('/jajascript/optimize/'.length));
-      if (questionsEnonce2.containsKey(hash)) {
-        final List json = JSON.parse(questionsEnonce2[hash]);
-        final List<Order> orders = json.map((e) => new Order(e['VOL'], e['DEPART'], e['DUREE'], e['PRIX']));
-        orders.sort((e1, e2) => e1.depart.compareTo(e2.depart));
-        final List<Order> bestTrip = findBestTrip(orders);
+      final List json = JSON.parse(content);
+      final List<Order> orders = json.map((e) => new Order(e['VOL'], e['DEPART'], e['DUREE'], e['PRIX']));
+      orders.sort((e1, e2) => e1.depart.compareTo(e2.depart));
+      final List<Order> bestTrip = findBestTrip(orders);
 
-        // send response
-        response.statusCode = HttpStatus.OK;
-        response.headers.add(HttpHeaders.CONTENT_TYPE, "application/json");
-        response.outputStream.writeString(JSON.stringify({
-          "gain" : computePrix(bestTrip),
-          "path" : bestTrip.map((e) => e.vol),
-        }));
-        response.outputStream.close();
-      } else {
-        response.statusCode = HttpStatus.NOT_FOUND;
-        response.outputStream.close();
-      }
-    } else {
-      response.statusCode = HttpStatus.BAD_REQUEST;
+      // send response
+      response.statusCode = HttpStatus.OK;
+      response.headers.add(HttpHeaders.CONTENT_TYPE, "application/json");
+      response.outputStream.writeString(JSON.stringify({
+        "gain" : computePrix(bestTrip),
+        "path" : bestTrip.map((e) => e.vol),
+      }));
       response.outputStream.close();
-    }
+    });
   }
 
   int computePrix(List<Order> trip) => trip.reduce(0, (previousValue, e) => previousValue + e.prix);
