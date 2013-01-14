@@ -138,7 +138,7 @@ final opsBinary = [
   new OpBinary('/', (l, r) => (l is int && r is int && l % r == 0) ? l ~/ r : l / r),
 ];
 class OperationsHandler extends QuestionHandler {
-  bool handleQuestion(String queryString) => queryString.startsWith("q=") && resolve(queryString.substring("q=".length)) != null;
+  bool handleQuestion(String queryString) => queryString !=null && queryString.startsWith("q=") && resolve(queryString.substring("q=".length)) != null;
 
   String answer(String queryString){
     if(queryString=='q=((1,1+2)+3,14+4+(5+6+7)+(8+9+10)*4267387833344334647677634)/2*553344300034334349999000'){
