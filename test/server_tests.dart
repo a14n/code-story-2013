@@ -129,4 +129,12 @@ main() {
     expect(q.handleQuestion('${question}fail'), equals(false));
     expect(q.answer(question), equals(answer));
   });
+  test('q9', () {
+    final q = new Q9Handler();
+    final question = 'q=As+tu+copie+le+code+de+ndeloof(OUI/NON/JE_SUIS_NICOLAS)';
+    final answer = 'NON';
+    expect(q.handleQuestion(question), equals(true));
+    expect(q.handleQuestion('${question}fail'), equals(false));
+    expect(q.answer(question), equals(answer));
+  });
 }

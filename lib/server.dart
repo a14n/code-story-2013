@@ -12,6 +12,7 @@ void launchServer() {
   final port = portEnv != null ? int.parse(portEnv) : 8080;
   server.listen(host, port);
 
+  new Q9Handler().register(server);
   new Q8Handler().register(server);
   new Enonce2Handler().register(server);
   new Enonce2PostHandler().register(server);
@@ -380,6 +381,11 @@ class Enonce2Handler extends Handler {
 class Q8Handler extends QuestionHandler {
   bool handleQuestion(String queryString) => queryString == 'q=As+tu+bien+recu+le+second+enonce(OUI/NON)';
   String answer(String queryString) => "OUI";
+}
+
+class Q9Handler extends QuestionHandler {
+  bool handleQuestion(String queryString) => queryString == 'q=As+tu+copie+le+code+de+ndeloof(OUI/NON/JE_SUIS_NICOLAS)';
+  String answer(String queryString) => "NON";
 }
 
 Future<String> readStreamAsString(InputStream stream) {
