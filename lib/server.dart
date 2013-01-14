@@ -314,13 +314,14 @@ class Enonce2PostHandler extends Handler {
     response.outputStream.close();
   }
 }
-final questionsEnonce2 = new Map<int, String>();
 class Order {
   final String vol;
   final int depart, duree, prix;
   Order(this.vol, this.depart, this.duree, this.prix);
 }
 class Enonce2Handler extends Handler {
+  final questionsEnonce2 = new Map<int, String>();
+
   bool accept(HttpRequest request) => request.path.startsWith('/jajascript/optimize');
   void handle(HttpRequest request, HttpResponse response) {
     if (request.method == 'POST' && request.path == '/jajascript/optimize') {
@@ -335,19 +336,24 @@ class Enonce2Handler extends Handler {
       });
     } else if (request.method == 'GET' && request.path.startsWith('/jajascript/optimize')) {
       final hash = int.parse(request.path.substring('/jajascript/optimize/'.length));
-      final List json = JSON.parse(questionsEnonce2[hash]);
-      final List<Order> orders = json.map((e) => new Order(e['VOL'], e['DEPART'], e['DUREE'], e['PRIX']));
-      orders.sort((e1, e2) => e1.depart.compareTo(e2.depart));
-      final List<Order> bestTrip = findBestTrip(orders);
+      if (questionsEnonce2.containsKey(hash)) {
+        final List json = JSON.parse(questionsEnonce2[hash]);
+        final List<Order> orders = json.map((e) => new Order(e['VOL'], e['DEPART'], e['DUREE'], e['PRIX']));
+        orders.sort((e1, e2) => e1.depart.compareTo(e2.depart));
+        final List<Order> bestTrip = findBestTrip(orders);
 
-      // send response
-      response.statusCode = HttpStatus.OK;
-      response.headers.add(HttpHeaders.CONTENT_TYPE, "application/json");
-      response.outputStream.writeString(JSON.stringify({
-        "gain" : computePrix(bestTrip),
-        "path" : bestTrip.map((e) => e.vol),
-      }));
-      response.outputStream.close();
+        // send response
+        response.statusCode = HttpStatus.OK;
+        response.headers.add(HttpHeaders.CONTENT_TYPE, "application/json");
+        response.outputStream.writeString(JSON.stringify({
+          "gain" : computePrix(bestTrip),
+          "path" : bestTrip.map((e) => e.vol),
+        }));
+        response.outputStream.close();
+      } else {
+        response.statusCode = HttpStatus.NOT_FOUND;
+        response.outputStream.close();
+      }
     } else {
       response.statusCode = HttpStatus.BAD_REQUEST;
       response.outputStream.close();
