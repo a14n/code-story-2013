@@ -385,7 +385,7 @@ class Q8Handler extends QuestionHandler {
 
 class Q9Handler extends QuestionHandler {
   bool handleQuestion(String queryString) => queryString == 'q=As+tu+copie+le+code+de+ndeloof(OUI/NON/JE_SUIS_NICOLAS)';
-  String answer(String queryString) => "NON";
+  String answer(String queryString) => "OUI";
 }
 
 Future<String> readStreamAsString(InputStream stream) {
