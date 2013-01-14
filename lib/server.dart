@@ -328,10 +328,15 @@ class Enonce2Handler extends Handler {
       final List<Order> orders = json.map((e) => new Order(e['VOL'], e['DEPART'], e['DUREE'], e['PRIX']));
       orders.sort((e1, e2) => e1.depart.compareTo(e2.depart));
       final List<Order> bestTrip = findBestTrip(orders);
-      sendResponse(response, JSON.stringify({
+
+      // send response
+      response.statusCode = HttpStatus.CREATED;
+      response.headers.add(HttpHeaders.CONTENT_TYPE, "application/json");
+      response.outputStream.writeString(JSON.stringify({
         "gain" : computePrix(bestTrip),
         "path" : bestTrip.map((e) => e.vol),
       }));
+      response.outputStream.close();
     });
   }
 
