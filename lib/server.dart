@@ -333,6 +333,7 @@ class Enonce2Handler extends Handler {
         response.statusCode = HttpStatus.CREATED;
         response.headers.add(HttpHeaders.CONTENT_TYPE, "application/json");
         response.headers.add(HttpHeaders.LOCATION, "/jajascript/optimize/${content.hashCode}");
+        response.outputStream.writeString("/jajascript/optimize/${content.hashCode}");
         response.outputStream.close();
       });
     } else if (request.method == 'GET' && request.path.startsWith('/jajascript/optimize')) {
