@@ -12,6 +12,7 @@ void launchServer() {
   final port = portEnv != null ? int.parse(portEnv) : 8080;
   server.listen(host, port);
 
+  new Q8Handler().register(server);
   new Enonce2Handler().register(server);
   new Enonce2PostHandler().register(server);
   new Q7Handler().register(server);
@@ -368,6 +369,11 @@ class Enonce2Handler extends Handler {
     }
     return bestTrip;
   }
+}
+
+class Q8Handler extends QuestionHandler {
+  bool handleQuestion(String queryString) => queryString == 'q=As+tu+bien+recu+le+second+enonce(OUI/NON)';
+  String answer(String queryString) => "OUI";
 }
 
 Future<String> readStreamAsString(InputStream stream) {

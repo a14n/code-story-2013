@@ -121,4 +121,12 @@ main() {
         ;
     expect(Strings.join(q.findBestTrip(orders).map((e)=>e.vol), ', '), equals("MONAD42, LEGACY01"));
   });
+  test('q8', () {
+    final q = new Q8Handler();
+    final question = 'q=As+tu+bien+recu+le+second+enonce(OUI/NON)';
+    final answer = 'OUI';
+    expect(q.handleQuestion(question), equals(true));
+    expect(q.handleQuestion('${question}fail'), equals(false));
+    expect(q.answer(question), equals(answer));
+  });
 }
