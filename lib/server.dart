@@ -314,27 +314,28 @@ class Enonce2PostHandler extends Handler {
     response.outputStream.close();
   }
 }
+final questionsEnonce2 = new Map<int, String>();
 class Order {
   final String vol;
   final int depart, duree, prix;
   Order(this.vol, this.depart, this.duree, this.prix);
 }
 class Enonce2Handler extends Handler {
-  String currentQuestion;
-  bool accept(HttpRequest request) => request.path == '/jajascript/optimize';
+  bool accept(HttpRequest request) => request.path.startsWith('/jajascript/optimize');
   void handle(HttpRequest request, HttpResponse response) {
-    if (request.method == 'POST') {
+    if (request.method == 'POST' && request.path == '/jajascript/optimize') {
       readStreamAsString(request.inputStream).then((content) {
-        print("json of enonce 2 : ${content.replaceAll('\n', '<aa:br/>')}");
-        currentQuestion = content;
+        print("json of enonce 2 ${content.hashCode} : ${content.replaceAll('\n', '<aa:br/>')}");
+        questionsEnonce2[content.hashCode] = content;
 
         // send response
         response.statusCode = HttpStatus.CREATED;
-        response.headers.add(HttpHeaders.LOCATION, "/jajascript/optimize");
+        response.headers.add(HttpHeaders.LOCATION, "/jajascript/optimize/${content.hashCode}");
         response.outputStream.close();
       });
-    } else if (request.method == 'GET') {
-      final List json = JSON.parse(currentQuestion);
+    } else if (request.method == 'GET' && request.path.startsWith('/jajascript/optimize')) {
+      final hash = int.parse(request.path.substring('/jajascript/optimize/'.length));
+      final List json = JSON.parse(questionsEnonce2[hash]);
       final List<Order> orders = json.map((e) => new Order(e['VOL'], e['DEPART'], e['DUREE'], e['PRIX']));
       orders.sort((e1, e2) => e1.depart.compareTo(e2.depart));
       final List<Order> bestTrip = findBestTrip(orders);
