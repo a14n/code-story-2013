@@ -331,6 +331,7 @@ class Enonce2Handler extends Handler {
 
         // send response
         response.statusCode = HttpStatus.CREATED;
+        response.headers.add(HttpHeaders.CONTENT_TYPE, "application/json");
         response.headers.add(HttpHeaders.LOCATION, "/jajascript/optimize/${content.hashCode}");
         response.outputStream.close();
       });
