@@ -346,22 +346,28 @@ class Enonce2Handler extends Handler {
   int computePrix(List<Order> trip) => trip.reduce(0, (previousValue, e) => previousValue + e.prix);
 
   List<Order> findBestTrip(List<Order> orders) {
+    int oldSize = orders.length;
     orders = _filterUnused(orders);
+    print("old size : $oldSize => ${orders.length}");
     orders.sort((e1, e2) => e1.depart.compareTo(e2.depart));
-    print("sorted");
     return _findBestTrip(orders, new Map<String, List<Order>>());
   }
 
   List<Order> _filterUnused(final List<Order> orders) {
     for(int i = 0; i < orders.length; i++){
       final order = orders[i];
-      final useless = orders.filter((e) => e != order && e.depart <= order.depart && e.depart + e.duree >= order.depart + order.duree && e.prix <= order.prix);
+      final useless = orders.filter((e) => e != order
+          && e.depart <= order.depart // starts before
+          && e.depart + e.duree >= order.depart + order.duree // ends after
+          && e.prix <= order.prix); // less price
       if (!useless.isEmpty) {
-        print("${useless.length} useless orders found");
-        return new List<Order>.from(orders.filter((e) => !useless.contains(e)));
+        //print("${useless.length} useless orders found");
+        //print(order.vol);
+        //print(useless.map((e)=>e.vol));
+        return _filterUnused(orders.filter((e) => !useless.contains(e)));
       }
     }
-    return new List<Order>.from(orders);
+    return orders;
   }
 
   List<Order> _findBestTrip(List<Order> orders, Map<String, List<Order>> cache) {
