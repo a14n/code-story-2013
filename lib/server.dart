@@ -326,25 +326,45 @@ class Enonce2Handler extends Handler {
     readStreamAsString(request.inputStream).then((content) {
       print("json of enonce 2: ${content.replaceAll('\n', '<aa:br/>')}");
 
-      final List json = JSON.parse(content);
-      final List<Order> orders = json.map((e) => new Order(e['VOL'], e['DEPART'], e['DUREE'], e['PRIX']));
-      orders.sort((e1, e2) => e1.depart.compareTo(e2.depart));
+      final List<Order> orders = deserialize(content);
       final List<Order> bestTrip = findBestTrip(orders);
 
       // send response
       response.statusCode = HttpStatus.OK;
       response.headers.add(HttpHeaders.CONTENT_TYPE, "application/json");
-      response.outputStream.writeString(JSON.stringify({
-        "gain" : computePrix(bestTrip),
-        "path" : bestTrip.map((e) => e.vol),
-      }));
+      response.outputStream.writeString(getResultAsString(bestTrip));
       response.outputStream.close();
     });
   }
 
+  List<Order> deserialize(String json) => JSON.parse(json).map((e) => new Order(e['VOL'], e['DEPART'], e['DUREE'], e['PRIX']));
+  String getResultAsString(List<Order> orders) => JSON.stringify({
+    "gain" : computePrix(orders),
+    "path" : orders.map((e) => e.vol),
+  });
+
   int computePrix(List<Order> trip) => trip.reduce(0, (previousValue, e) => previousValue + e.prix);
 
   List<Order> findBestTrip(List<Order> orders) {
+    orders = _filterUnused(orders);
+    orders.sort((e1, e2) => e1.depart.compareTo(e2.depart));
+    print("sorted");
+    return _findBestTrip(orders, new Map<String, List<Order>>());
+  }
+
+  List<Order> _filterUnused(final List<Order> orders) {
+    for(int i = 0; i < orders.length; i++){
+      final order = orders[i];
+      final useless = orders.filter((e) => e != order && e.depart <= order.depart && e.depart + e.duree >= order.depart + order.duree && e.prix <= order.prix);
+      if (!useless.isEmpty) {
+        print("${useless.length} useless orders found");
+        return new List<Order>.from(orders.filter((e) => !useless.contains(e)));
+      }
+    }
+    return new List<Order>.from(orders);
+  }
+
+  List<Order> _findBestTrip(List<Order> orders, Map<String, List<Order>> cache) {
     final trips = new List<List<Order>>();
     int minArrivee = null;
     for (final order in orders) {
@@ -356,7 +376,9 @@ class Enonce2Handler extends Handler {
       final trip = [order];
       final nextAvailableOrders = orders.filter((e) => e.depart >= arrivee);
       if (!nextAvailableOrders.isEmpty) {
-        trip.addAll(findBestTrip(nextAvailableOrders));
+        final cacheKey = Strings.join(orders.map((e) => e.vol), '-/__/-');
+        cache.putIfAbsent(cacheKey, () => _findBestTrip(nextAvailableOrders, cache));
+        trip.addAll(cache[cacheKey]);
       }
       trips.add(trip);
 
@@ -366,7 +388,7 @@ class Enonce2Handler extends Handler {
 
     // find best
     int bestPrix = 0;
-    List<Order> bestTrip = null;
+    List<Order> bestTrip = [];
     for (final trip in trips) {
       final prix = computePrix(trip);
       if(prix > bestPrix) {
