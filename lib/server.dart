@@ -319,6 +319,14 @@ class Order {
   final String vol;
   final int depart, duree, prix;
   Order(this.vol, this.depart, this.duree, this.prix);
+  List<Order> get path => [this];
+}
+class CompositeOrder extends Order {
+  List<Order> orders;
+  CompositeOrder(List<Order> orders) : super('composite', orders.first.depart, orders.last.depart + orders.last.duree - orders.first.depart, Enonce2Handler.computePrix(orders)){
+    this.orders = orders;
+  }
+  List<Order> get path => orders;
 }
 class Enonce2Handler extends Handler {
   bool accept(HttpRequest request) => request.method == 'POST' && request.path == '/jajascript/optimize';
@@ -343,14 +351,67 @@ class Enonce2Handler extends Handler {
     "path" : orders.map((e) => e.vol),
   });
 
-  int computePrix(List<Order> trip) => trip.reduce(0, (previousValue, e) => previousValue + e.prix);
+  static int computePrix(List<Order> trip) => trip.reduce(0, (int previousValue, e) => previousValue + e.prix);
 
   List<Order> findBestTrip(List<Order> orders) {
     int oldSize = orders.length;
-    orders = _filterUnused(orders);
-    print("old size : $oldSize => ${orders.length}");
     orders.sort((e1, e2) => e1.depart.compareTo(e2.depart));
-    return _findBestTrip(orders, new Map<String, List<Order>>());
+    return refine(orders);
+  }
+
+  List<Order> refine(List<Order> orders) {
+    orders = _filterUnused(orders);
+    final refinedOrders = [];
+    for (int i = 0; i < orders.length; i++) {
+      final firstOrder = orders[i];
+
+      // compose new order with one next order
+      final compositeOrders = new List<CompositeOrder>();
+      int minArrivee = null;
+      for (int j = i + 1; j < orders.length; j++) {
+        final order = orders[j];
+
+        // depart must be after arrivee
+        if (order.depart < firstOrder.depart + firstOrder.duree) {
+          continue;
+        }
+
+        // if depart if after minArrivee, it can be add with that composition
+        // and as orders are ordering, we can break
+        if (minArrivee != null && order.depart >= minArrivee) {
+          break;
+        }
+
+        // add composite order
+        compositeOrders.add(new CompositeOrder(new List<Order>.from(firstOrder.path)..addAll(order.path)));
+
+        // update min
+        final arrivee = order.depart + order.duree;
+        minArrivee = minArrivee == null || arrivee < minArrivee ? arrivee : minArrivee;
+      }
+
+      // add to refinedOrders
+      if (compositeOrders.isEmpty) {
+        refinedOrders.add(firstOrder);
+      } else {
+        refinedOrders.addAll(compositeOrders);
+      }
+    }
+
+    // exit or refine one  more time
+    if (orders.length == refinedOrders.length) {
+      int bestPrix = 0;
+      List<Order> bestTrip = [];
+      for (final order in refinedOrders) {
+        if(order.prix > bestPrix) {
+          bestPrix = order.prix;
+          bestTrip = order.path;
+        }
+      }
+      return bestTrip;
+    } else {
+      return refine(refinedOrders);
+    }
   }
 
   List<Order> _filterUnused(final List<Order> orders) {
@@ -368,42 +429,6 @@ class Enonce2Handler extends Handler {
       }
     }
     return orders;
-  }
-
-  List<Order> _findBestTrip(List<Order> orders, Map<String, List<Order>> cache) {
-    final trips = new List<List<Order>>();
-    int minArrivee = null;
-    for (final order in orders) {
-      if (minArrivee != null && order.depart >= minArrivee) {
-        break;
-      }
-      final arrivee = order.depart + order.duree;
-
-      final trip = [order];
-      final nextAvailableOrders = orders.filter((e) => e.depart >= arrivee);
-      if (!nextAvailableOrders.isEmpty) {
-        final cacheKey = Strings.join(orders.map((e) => e.vol), '-/__/-');
-        cache.putIfAbsent(cacheKey, () => _findBestTrip(nextAvailableOrders, cache));
-        trip.addAll(cache[cacheKey]);
-        //trip.addAll(_findBestTrip(nextAvailableOrders, cache));
-      }
-      trips.add(trip);
-
-      // update min
-      minArrivee = minArrivee == null || arrivee < minArrivee ? arrivee : minArrivee;
-    }
-
-    // find best
-    int bestPrix = 0;
-    List<Order> bestTrip = [];
-    for (final trip in trips) {
-      final prix = computePrix(trip);
-      if(prix > bestPrix) {
-        bestPrix = prix;
-        bestTrip = trip;
-      }
-    }
-    return bestTrip;
   }
 }
 
