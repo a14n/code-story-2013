@@ -360,10 +360,13 @@ class Enonce2Handler extends Handler {
   }
 
   List<Order> refine(List<Order> orders) {
+    print("size : ${orders.length}");
     orders = _filterUnused(orders);
+    print("size purged : ${orders.length}");
     final refinedOrders = [];
     for (int i = 0; i < orders.length; i++) {
       final firstOrder = orders[i];
+      final tail = orders.getRange(i + 1, orders.length - ( i + 1 ));
 
       // compose new order with one next order
       final compositeOrders = new List<CompositeOrder>();
@@ -383,7 +386,10 @@ class Enonce2Handler extends Handler {
         }
 
         // add composite order
-        compositeOrders.add(new CompositeOrder(new List<Order>.from(firstOrder.path)..addAll(order.path)));
+        final composite = new CompositeOrder(new List<Order>.from(firstOrder.path)..addAll(order.path));
+        if (_isUsefull(composite, tail)) {
+          compositeOrders.add(composite);
+        }
 
         // update min
         final arrivee = order.depart + order.duree;
@@ -430,6 +436,14 @@ class Enonce2Handler extends Handler {
     }
     return orders;
   }
+
+  /// looking for one shorter and with better price
+  bool _isUsefull(Order order, final List<Order> orders) =>
+      orders.filter((e) => e != order
+          && e.depart >= order.depart // starts before
+          && e.depart + e.duree <= order.depart + order.duree // ends after
+          && e.prix >= order.prix) // less price
+          .isEmpty;
 }
 
 class Q8Handler extends QuestionHandler {
