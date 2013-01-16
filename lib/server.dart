@@ -385,6 +385,7 @@ class Enonce2Handler extends Handler {
         final cacheKey = Strings.join(orders.map((e) => e.vol), '-/__/-');
         cache.putIfAbsent(cacheKey, () => _findBestTrip(nextAvailableOrders, cache));
         trip.addAll(cache[cacheKey]);
+        //trip.addAll(_findBestTrip(nextAvailableOrders, cache));
       }
       trips.add(trip);
 
