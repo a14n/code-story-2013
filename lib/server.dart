@@ -319,7 +319,15 @@ class Order {
   final String vol;
   final int depart, duree, prix;
   Order(this.vol, this.depart, this.duree, this.prix);
+  int get arrivee => depart + duree;
   List<Order> get path => [this];
+  String toString() => '${vol}(${depart}-${arrivee}/${prix})';
+  toJson() => {
+    'VOL': vol,
+    'DEPART': depart,
+    'DUREE': duree,
+    'PRIX': prix
+  };
 }
 class CompositeOrder extends Order {
   List<Order> orders;
@@ -327,14 +335,14 @@ class CompositeOrder extends Order {
     this.orders = orders;
   }
   List<Order> get path => orders;
+  String toString() => Strings.join(orders.map((e) => e.toString()), ', ');
 }
 class Enonce2Handler extends Handler {
   bool accept(HttpRequest request) => request.method == 'POST' && request.path == '/jajascript/optimize';
   void handle(HttpRequest request, HttpResponse response) {
     readStreamAsString(request.inputStream).then((content) {
-      print("json of enonce 2: ${content.replaceAll('\n', '<aa:br/>')}");
-
       final List<Order> orders = deserialize(content);
+      print('received optimize request with ${orders.length} orders');
       final List<Order> bestTrip = findBestTrip(orders);
 
       // send response
@@ -353,97 +361,69 @@ class Enonce2Handler extends Handler {
 
   static int computePrix(List<Order> trip) => trip.reduce(0, (int previousValue, e) => previousValue + e.prix);
 
-  List<Order> findBestTrip(List<Order> orders) {
-    int oldSize = orders.length;
-    orders.sort((e1, e2) => e1.depart.compareTo(e2.depart));
-    return refine(orders);
-  }
+  List<Order> findBestTrip(List<Order> _orders) {
+    List<Order> orders = new List<Order>.from(_orders);
 
-  List<Order> refine(List<Order> orders) {
-    print("size : ${orders.length}");
-    orders = _filterUnused(orders);
-    print("size purged : ${orders.length}");
-    final refinedOrders = [];
-    for (int i = 0; i < orders.length; i++) {
-      final firstOrder = orders[i];
-      final tail = orders.getRange(i + 1, orders.length - ( i + 1 ));
+    // sort
+    orders.sort((e1, e2) {
+      int departComp = e1.depart.compareTo(e2.depart);
+      return departComp != 0 ? departComp : e1.duree.compareTo(e2.duree);
+    });
 
-      // compose new order with one next order
-      final compositeOrders = new List<CompositeOrder>();
-      int minArrivee = null;
-      for (int j = i + 1; j < orders.length; j++) {
-        final order = orders[j];
+    // construct result
+    int lastDepart = 0;
+    for (int i = 1; i < orders.length; i++) {
+      List<Order> head = orders.getRange(0, i);
+      final order = orders[i];
 
-        // depart must be after arrivee
-        if (order.depart < firstOrder.depart + firstOrder.duree) {
-          continue;
+      // clean head : find best for all trip having arrivee <= order.depart
+      if (lastDepart < order.depart) {
+        final cleanables = head.filter((o) => o.arrivee <= order.depart);
+        if (cleanables.length > 0) {
+          final bestOfCleanable = _findBestOrder(cleanables);
+          for (final cleanable in cleanables) {
+            if (cleanable != bestOfCleanable) {
+              orders.removeAt(orders.indexOf(cleanable));
+            }
+          }
+          i -= cleanables.length - 1;
+          head = orders.getRange(0, i);
         }
-
-        // if depart if after minArrivee, it can be add with that composition
-        // and as orders are ordering, we can break
-        if (minArrivee != null && order.depart >= minArrivee) {
-          break;
-        }
-
-        // add composite order
-        final composite = new CompositeOrder(new List<Order>.from(firstOrder.path)..addAll(order.path));
-        if (_isUsefull(composite, tail)) {
-          compositeOrders.add(composite);
-        }
-
-        // update min
-        final arrivee = order.depart + order.duree;
-        minArrivee = minArrivee == null || arrivee < minArrivee ? arrivee : minArrivee;
+        lastDepart = order.depart;
       }
 
-      // add to refinedOrders
-      if (compositeOrders.isEmpty) {
-        refinedOrders.add(firstOrder);
-      } else {
-        refinedOrders.addAll(compositeOrders);
+
+      // combine with previous
+      final compositions = new List<Order>();
+      for (final previous in head) {
+        if (previous.arrivee <= order.depart) {
+          compositions.add(new CompositeOrder(new List<Order>.from(previous.path)..addAll(order.path)));
+        }
+      }
+
+      // remove useless compositions : end after with less prix
+      for (int j = 0; j < compositions.length; j++) {
+        final composition = compositions[j];
+        if (head.some((o) => o.arrivee <= composition.arrivee && o.prix >= composition.prix)) {
+          compositions.removeAt(j--);
+        }
+      }
+
+      // add
+      if (!compositions.isEmpty) {
+        for (int j = 0; j < compositions.length; j++) {
+          orders.insertRange(++i, 1, compositions[j]);
+        }
       }
     }
 
     // exit or refine one  more time
-    if (orders.length == refinedOrders.length) {
-      int bestPrix = 0;
-      List<Order> bestTrip = [];
-      for (final order in refinedOrders) {
-        if(order.prix > bestPrix) {
-          bestPrix = order.prix;
-          bestTrip = order.path;
-        }
-      }
-      return bestTrip;
-    } else {
-      return refine(refinedOrders);
-    }
+    final best = _findBestOrder(orders);
+    return  best == null ? [] : best.path;
   }
-
-  List<Order> _filterUnused(final List<Order> orders) {
-    for(int i = 0; i < orders.length; i++){
-      final order = orders[i];
-      final useless = orders.filter((e) => e != order
-          && e.depart <= order.depart // starts before
-          && e.depart + e.duree >= order.depart + order.duree // ends after
-          && e.prix <= order.prix); // less price
-      if (!useless.isEmpty) {
-        //print("${useless.length} useless orders found");
-        //print(order.vol);
-        //print(useless.map((e)=>e.vol));
-        return _filterUnused(orders.filter((e) => !useless.contains(e)));
-      }
-    }
-    return orders;
-  }
-
-  /// looking for one shorter and with better price
-  bool _isUsefull(Order order, final List<Order> orders) =>
-      orders.filter((e) => e != order
-          && e.depart >= order.depart // starts before
-          && e.depart + e.duree <= order.depart + order.duree // ends after
-          && e.prix >= order.prix) // less price
-          .isEmpty;
+  Order _findBestOrder(List<Order> orders) => orders.isEmpty ? null :
+    orders.reduce(orders.first, (Order best, Order order) =>
+        order.prix > best.prix || (order.prix == best.prix && order.duree < best.duree) ? order : best);
 }
 
 class Q8Handler extends QuestionHandler {

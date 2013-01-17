@@ -1,1 +1,1 @@
-{"packages":{"unittest":{"version":"0.2.10+1","source":"hosted","description":"unittest"}}}
+{"packages":{"benchmark_harness":{"version":"1.0.2","source":"hosted","description":"benchmark_harness"},"unittest":{"version":"0.2.10+1","source":"hosted","description":"unittest"}}}
