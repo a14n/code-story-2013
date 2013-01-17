@@ -14,6 +14,7 @@ void launchServer() {
 
   new Q9Handler().register(server);
   new Q8Handler().register(server);
+  new LastEnonce2GetHandler().register(server);
   new Enonce2Handler().register(server);
   new Enonce2PostHandler().register(server);
   new Q7Handler().register(server);
@@ -337,10 +338,20 @@ class CompositeOrder extends Order {
   List<Order> get path => orders;
   String toString() => Strings.join(orders.map((e) => e.toString()), ', ');
 }
+String lastEnonce2 = "";
+class LastEnonce2GetHandler extends Handler {
+  bool accept(HttpRequest request) => request.method == 'GET' && request.path == '/jajascript/optimize';
+  void handle(HttpRequest request, HttpResponse response) {
+    response.statusCode = HttpStatus.OK;
+    response.outputStream.writeString(lastEnonce2);
+    response.outputStream.close();
+  }
+}
 class Enonce2Handler extends Handler {
   bool accept(HttpRequest request) => request.method == 'POST' && request.path == '/jajascript/optimize';
   void handle(HttpRequest request, HttpResponse response) {
     readStreamAsString(request.inputStream).then((content) {
+      lastEnonce2 = content;
       final List<Order> orders = deserialize(content);
       print('received optimize request with ${orders.length} orders');
       final List<Order> bestTrip = findBestTrip(orders);
