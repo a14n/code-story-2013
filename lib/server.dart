@@ -389,48 +389,28 @@ class Enonce2Handler extends Handler {
     });
 
     // construct result
-    int lastDepart = 0;
-    for (int i = 1; i < orders.length; i++) {
-      List<Order> head = orders.getRange(0, i);
-      final order = orders[i];
+    for (int i = 0; i < orders.length;) {
+      final index = i;
 
-      // clean head : find best for all trip having arrivee <= order.depart
-      if (lastDepart < order.depart) {
-        final cleanables = head.filter((o) => o.arrivee <= order.depart);
-        if (cleanables.length > 0) {
-          final bestOfCleanable = _findBestOrder(cleanables);
-          for (final cleanable in cleanables) {
-            if (cleanable != bestOfCleanable) {
-              orders.removeAt(orders.indexOf(cleanable));
-            }
+      // looking for range with same depart
+      final depart = orders[i].depart;
+      while (++i < orders.length && depart == orders[i].depart) {
+      }
+
+      //
+      final cleanables = orders.getRange(0, index).filter((o) => o.arrivee <= depart);
+      if (cleanables.length > 0) {
+        final bestBeforeLastDepart = _findBestOrder(cleanables);
+        for (final cleanable in cleanables) {
+          if (cleanable != bestBeforeLastDepart) {
+            orders.removeAt(orders.indexOf(cleanable));
           }
-          i -= cleanables.length - 1;
-          head = orders.getRange(0, i);
         }
-        lastDepart = order.depart;
-      }
+        i -= cleanables.length - 1;
 
-
-      // combine with previous
-      final compositions = new List<Order>();
-      for (final previous in head) {
-        if (previous.arrivee <= order.depart) {
-          compositions.add(new CompositeOrder(new List<Order>.from(previous.path)..addAll(order.path)));
-        }
-      }
-
-      // remove useless compositions : end after with less prix
-      for (int j = 0; j < compositions.length; j++) {
-        final composition = compositions[j];
-        if (head.some((o) => o.arrivee <= composition.arrivee && o.prix >= composition.prix)) {
-          compositions.removeAt(j--);
-        }
-      }
-
-      // add
-      if (!compositions.isEmpty) {
-        for (int j = 0; j < compositions.length; j++) {
-          orders.insertRange(++i, 1, compositions[j]);
+        //
+        for (int j = index - (cleanables.length - 1); j < i; j++) {
+          orders[j] = new CompositeOrder(new List<Order>.from(bestBeforeLastDepart.path)..addAll(orders[j].path));
         }
       }
     }
