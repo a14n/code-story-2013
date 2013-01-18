@@ -350,14 +350,21 @@ class Enonce2Handler extends Handler {
   void handle(HttpRequest request, HttpResponse response) {
     readStreamAsString(request.inputStream).then((content) {
       lastEnonce2 = content;
-      final List<Order> orders = deserialize(content);
-      print('received optimize request with ${orders.length} orders');
-      final List<Order> bestTrip = findBestTrip(orders);
 
-      // send response
-      response.statusCode = HttpStatus.OK;
-      response.headers.add(HttpHeaders.CONTENT_TYPE, "application/json");
-      response.outputStream.writeString(getResultAsString(bestTrip));
+      try {
+        final List<Order> orders = deserialize(content);
+        print('received optimize request with ${orders.length} orders');
+        final List<Order> bestTrip = findBestTrip(orders);
+
+        // send response
+        response.statusCode = HttpStatus.OK;
+        response.headers.add(HttpHeaders.CONTENT_TYPE, "application/json");
+        response.outputStream.writeString(getResultAsString(bestTrip));
+      } catch (e) {
+        print('bad json $e');
+        response.statusCode = HttpStatus.BAD_REQUEST;
+        response.outputStream.writeString("You send me bad json");
+      }
       response.outputStream.close();
     });
   }
