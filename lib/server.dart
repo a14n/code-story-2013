@@ -331,12 +331,10 @@ class Order {
   };
 }
 class CompositeOrder extends Order {
-  List<Order> orders;
-  CompositeOrder(List<Order> orders) : super('composite', orders.first.depart, orders.last.depart + orders.last.duree - orders.first.depart, Enonce2Handler.computePrix(orders)){
-    this.orders = orders;
-  }
-  List<Order> get path => orders;
-  String toString() => Strings.join(orders.map((e) => e.toString()), ', ');
+  final List<Order> _orders;
+  CompositeOrder(List<Order> orders) : super('composite', orders.first.depart, orders.last.depart + orders.last.duree - orders.first.depart, Enonce2Handler.computePrix(orders)), this._orders = orders;
+  List<Order> get path => _orders;
+  String toString() => Strings.join(_orders.map((e) => e.toString()), ', ');
 }
 String lastEnonce2 = "";
 class LastEnonce2GetHandler extends Handler {
@@ -373,6 +371,8 @@ class Enonce2Handler extends Handler {
   static int computePrix(List<Order> trip) => trip.reduce(0, (int previousValue, e) => previousValue + e.prix);
 
   List<Order> findBestTrip(List<Order> _orders) {
+    if (_orders.isEmpty) return [];
+
     List<Order> orders = new List<Order>.from(_orders);
 
     // sort
