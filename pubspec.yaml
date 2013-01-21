@@ -3,3 +3,4 @@ description: Code Story 2013
 dependencies:
   unittest: any
   benchmark_harness: ">=1.0.2 <2.0.0"
+  decimal: '<1.0.0'

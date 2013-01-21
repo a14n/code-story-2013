@@ -3,6 +3,7 @@ library code_story_2013;
 import 'dart:io';
 import 'dart:json';
 import 'dart:math';
+import 'package:decimal/decimal.dart';
 
 void launchServer() {
   final server = new HttpServer();
@@ -142,50 +143,16 @@ class OperationsHandler extends QuestionHandler {
   bool handleQuestion(String queryString) => queryString !=null && queryString.startsWith("q=") && resolve(queryString.substring("q=".length)) != null;
 
   String answer(String queryString){
-    if(queryString=='q=((1,1+2)+3,14+4+(5+6+7)+(8+9+10)*4267387833344334647677634)/2*553344300034334349999000'){
-      return "31878018903828899277492024491376690701584023926880";
-    }
     final number = resolve(queryString.substring("q=".length));
-    return formatNumber(number);
+    return number.toString().replaceAll('.', ',');
   }
 
-  String formatNumber(num number) {
-    if(number is int && !number.toString().contains('e')){
-      return number.toString().replaceAll('.', ',');
-    }
-    if(number == 0.0){
-      return '0';
-    }
-    final integerDigits = new List<int>();
-    int integerPart = number.truncate().toInt().abs();
-    while (integerPart > 0) {
-      integerDigits.insertRange(0, 1, integerPart % 10);
-      integerPart = integerPart ~/ 10;
-    }
-
-    final integerPartString = Strings.join(integerDigits.map((e) => e.toString()), '');
-
-    final decimals = (number - number.truncate()).abs();
-    if (decimals != 0) {
-      String result = '${integerPartString},${((1 + decimals) * pow(10,10)).round().toInt().toString().substring(1)}';
-      while(result.endsWith('0')){
-        result = result.substring(0, result.length - 1);
-      }
-      if (result.endsWith(',')) {
-        return result.substring(0, result.length - 1);
-      }
-      return number < 0 ? '-$result' : result;
-    } else {
-      return number < 0 ? '-$integerPartString' : integerPartString;
-    }
-  }
-
-  num resolve(String s) {
+  Decimal resolve(String s) {
     // print("parse ${s}");
     final closing = new Closing(s);
     if (closing.match()) {
       final middleValue = resolve(closing.middle());
-      return middleValue == null ? null : resolve('${closing.left()}${formatNumber(middleValue)}${closing.right()}');
+      return middleValue == null ? null : resolve('${closing.left()}${middleValue}${closing.right()}');
     }
     for (final opBinary in opsBinary) {
       if (opBinary.match(s)) {
@@ -195,18 +162,10 @@ class OperationsHandler extends QuestionHandler {
       }
     }
     try {
-      return int.parse(s);
+      return new Decimal(s.replaceFirst(',', '.'));
     } on FormatException {
-      try {
-        return double.parse(s.replaceFirst(',', '.'));
-      } on FormatException {
-        try {
-          return double.parse(s);
-        } on FormatException {
-          print('Bad number:${s}');
-          return null;
-        }
-      }
+        print('Bad number:${s}');
+        return null;
     }
   }
 }
@@ -348,18 +307,20 @@ class LastEnonce2GetHandler extends Handler {
 class Enonce2Handler extends Handler {
   bool accept(HttpRequest request) => request.method == 'POST' && request.path == '/jajascript/optimize';
   void handle(HttpRequest request, HttpResponse response) {
+    final swReadInput = new Stopwatch()..start();
     readStreamAsString(request.inputStream).then((content) {
+      print("input read in ${swReadInput.elapsedMicroseconds}µs");
       lastEnonce2 = content;
 
       try {
-        final List<Order> orders = deserialize(content);
+        final List<Order> orders = mesure('read JSON', () => deserialize(content));
         print('received optimize request with ${orders.length} orders');
-        final List<Order> bestTrip = findBestTrip(orders);
+        final List<Order> bestTrip = mesure('findBestTrip', () => findBestTrip(orders));
 
         // send response
         response.statusCode = HttpStatus.OK;
         response.headers.add(HttpHeaders.CONTENT_TYPE, "application/json");
-        response.outputStream.writeString(getResultAsString(bestTrip));
+        mesure('send response', () => response.outputStream.writeString(mesure('getResultAsString', () => getResultAsString(bestTrip))));
       } catch (e) {
         print('bad json $e');
         response.statusCode = HttpStatus.BAD_REQUEST;
@@ -454,4 +415,11 @@ Future<String> readStreamAsString(InputStream stream) {
     ..onClosed = () { completer.complete(sb.toString()); }
     ..onError = (e) { completer.completeException(e); };
   return completer.future;
+}
+
+dynamic mesure(String desc, f()) {
+  final sw = new Stopwatch()..start();
+  final result = f();
+  print('$desc done in ${sw.elapsedMicroseconds}µs');
+  return result;
 }
