@@ -322,13 +322,14 @@ class Enonce2Handler extends Handler {
         // send response
         response.statusCode = HttpStatus.OK;
         response.headers.add(HttpHeaders.CONTENT_TYPE, "application/json");
-        mesure('send response', () => response.outputStream.writeString(mesure('$queryId : getResultAsString', () => getResultAsString(bestTrip))));
+        mesure('$queryId : send response', () => response.outputStream.writeString(mesure('$queryId : getResultAsString', () => getResultAsString(bestTrip))));
       } catch (e) {
         print('bad json $e');
         response.statusCode = HttpStatus.BAD_REQUEST;
         response.outputStream.writeString("You send me bad json");
       }
       response.outputStream.close();
+      print("$queryId : all has been done in ${swReadInput.elapsedMicroseconds}µs");
     });
   }
 
