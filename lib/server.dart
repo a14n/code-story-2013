@@ -305,22 +305,24 @@ class LastEnonce2GetHandler extends Handler {
   }
 }
 class Enonce2Handler extends Handler {
+  int queryCount = 1;
   bool accept(HttpRequest request) => request.method == 'POST' && request.path == '/jajascript/optimize';
   void handle(HttpRequest request, HttpResponse response) {
+    final queryId = queryCount++;
     final swReadInput = new Stopwatch()..start();
     readStreamAsString(request.inputStream).then((content) {
-      print("input read in ${swReadInput.elapsedMicroseconds}µs");
+      print("$queryId : input read in ${swReadInput.elapsedMicroseconds}µs");
       lastEnonce2 = content;
 
       try {
-        final List<Order> orders = mesure('read JSON', () => deserialize(content));
-        print('received optimize request with ${orders.length} orders');
-        final List<Order> bestTrip = mesure('findBestTrip', () => findBestTrip(orders));
+        final List<Order> orders = mesure('$queryId : read JSON', () => deserialize(content));
+        print('$queryId : received optimize request with ${orders.length} orders');
+        final List<Order> bestTrip = mesure('$queryId : findBestTrip', () => findBestTrip(orders));
 
         // send response
         response.statusCode = HttpStatus.OK;
         response.headers.add(HttpHeaders.CONTENT_TYPE, "application/json");
-        mesure('send response', () => response.outputStream.writeString(mesure('getResultAsString', () => getResultAsString(bestTrip))));
+        mesure('send response', () => response.outputStream.writeString(mesure('$queryId : getResultAsString', () => getResultAsString(bestTrip))));
       } catch (e) {
         print('bad json $e');
         response.statusCode = HttpStatus.BAD_REQUEST;
