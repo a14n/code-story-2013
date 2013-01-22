@@ -317,7 +317,7 @@ class Enonce2Handler extends Handler {
       try {
         final List<Order> orders = mesure('$queryId : read JSON', () => deserialize(content));
         print('$queryId : received optimize request with ${orders.length} orders');
-        final List<Order> bestTrip = mesure('$queryId : findBestTrip', () => findBestTrip(orders));
+        final List<Order> bestTrip = mesure('$queryId : findBestTrip', () => findBestTrip(orders, queryId));
 
         // send response
         response.statusCode = HttpStatus.OK;
@@ -341,52 +341,61 @@ class Enonce2Handler extends Handler {
 
   static int computePrix(List<Order> trip) => trip.reduce(0, (int previousValue, e) => previousValue + e.prix);
 
-  List<Order> findBestTrip(List<Order> _orders) {
+  List<Order> findBestTrip(List<Order> _orders, [int queryId = 0]) {
     if (_orders.isEmpty) return [];
 
-    List<Order> orders = new List<Order>.from(_orders);
+    List<Order> orders = mesure('$queryId : copy list', () => new List<Order>.from(_orders));
 
     // sort
-    orders.sort((e1, e2) {
+    mesure('$queryId : sort orders', () => orders.sort((e1, e2) {
       int departComp = e1.depart.compareTo(e2.depart);
       return departComp != 0 ? departComp : e1.duree.compareTo(e2.duree);
-    });
+    }));
 
     // construct result
     for (int i = 0; i < orders.length;) {
-      final index = i;
+
+      // the range of same depart
+      final startIndex = i;
+      int endIndex = startIndex;
 
       // looking for range with same depart
-      final depart = orders[i].depart;
-      while (++i < orders.length && depart == orders[i].depart) {
+      final depart = orders[startIndex].depart;
+      while (++endIndex < orders.length && depart == orders[endIndex].depart) {
       }
 
       // search cleanables : order with arrivee before depart
-      final cleanableIndexes = new List<int>();
+      final notCleanables = new List<Order>();
       final cleanables = new List<Order>();
-      for (int j = 0; j < index; j++) {
+      for (int j = 0; j < startIndex; j++) {
         final order = orders[j];
         if (order.arrivee <= depart) {
-          cleanableIndexes.add(j);
           cleanables.add(order);
+        } else {
+          notCleanables.add(order);
         }
       }
 
       // compose cleanable with orders starting at depart
       if (cleanables.length > 0) {
         final bestBeforeLastDepart = _findBestOrder(cleanables);
-        for (int j = cleanableIndexes.length - 1; j >= 0; j--) {
-          final cleanable = cleanables[j];
-          if (cleanable != bestBeforeLastDepart) {
-            orders.removeAt(cleanableIndexes[j]);
-          }
-        }
-        i -= cleanables.length - 1;
 
-        //
-        for (int j = index - (cleanables.length - 1); j < i; j++) {
-          orders[j] = new CompositeOrder(new List<Order>.from(bestBeforeLastDepart.path)..addAll(orders[j].path));
-        }
+        // compose new orders
+        final newComposites = orders.getRange(startIndex, endIndex - startIndex).map((o) => new CompositeOrder(new List<Order>.from(bestBeforeLastDepart.path)..addAll(o.path)));
+
+        // redefine orders
+        orders = new List<Order>(notCleanables.length + 1 + newComposites.length + (orders.length - endIndex))
+            ..setRange(0, notCleanables.length,  notCleanables)
+            ..[notCleanables.length] = bestBeforeLastDepart
+            ..setRange(notCleanables.length + 1, newComposites.length, newComposites)
+            ..setRange(notCleanables.length + 1 + newComposites.length, orders.length - endIndex,  orders, endIndex);
+//        orders = new List<Order>.from(notCleanables)
+//            ..add(bestBeforeLastDepart)
+//            ..addAll(newComposites)
+//            ..addAll(orders.getRange(endIndex, orders.length - endIndex));
+        i = endIndex - (cleanables.length - 1);
+      } else {
+        i = endIndex;
       }
     }
 
