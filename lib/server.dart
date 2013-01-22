@@ -365,19 +365,21 @@ class Enonce2Handler extends Handler {
       }
 
       // search cleanables : order with arrivee before depart
-      final notCleanables = new List<Order>();
-      final cleanables = new List<Order>();
-      for (int j = 0; j < startIndex; j++) {
-        final order = orders[j];
-        if (order.arrivee <= depart) {
-          cleanables.add(order);
-        } else {
-          notCleanables.add(order);
-        }
-      }
 
       // compose cleanable with orders starting at depart
-      if (cleanables.length > 0) {
+      if (orders.some((o) => o.arrivee <= depart)) {
+        final notCleanables = new List<Order>();
+        final cleanables = new List<Order>();
+        for (int j = 0; j < startIndex; j++) {
+          final order = orders[j];
+          if (order.arrivee <= depart) {
+            cleanables.add(order);
+          } else {
+            notCleanables.add(order);
+          }
+        }
+
+        // find best
         final bestBeforeLastDepart = _findBestOrder(cleanables);
 
         // compose new orders
