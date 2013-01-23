@@ -1,24 +1,27 @@
 import 'package:code_story_2013/server.dart';
 import 'package:unittest/unittest.dart';
-import 'dart:json';
+import 'dart:json' as JSON;
 import 'dart:math';
 import 'dart:io';
 import 'dart:uri';
 import 'package:benchmark_harness/benchmark_harness.dart';
 
 main() {
-//  final orders = generate(10000);
+//  final orders = generate(5000);
 //  final json = JSON.stringify(orders);
+//  final json = JSON.stringify(codeStory60());
 //  new File('data.json').writeAsStringSync(json);
 //  Benchmark.main();
-//  testHeroku(json);
-  final json = new File('data.json').readAsStringSync();
-  testLocal(json);
+//  final json = new File('data.json').readAsStringSync();
+  final json = new File('data-50000.json').readAsStringSync();
+//  testRemote(json, 'http://code-story-a14n-2013.herokuapp.com/jajascript/optimize');
+  testRemote(json, 'http://192.168.0.11:8080/jajascript/optimize');
+//  testLocal(json);
 }
 
-testHeroku(String json) {
+testRemote(String json, String uri) {
   final client = new HttpClient();
-  final hcc = client.postUrl(new Uri.fromString('http://code-story-a14n-2013.herokuapp.com/jajascript/optimize'));
+  final hcc = client.postUrl(new Uri.fromString(uri));
   hcc.onRequest = (request) {
     request.contentLength = json.length;
     request.outputStream.writeString(json);

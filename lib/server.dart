@@ -1,7 +1,8 @@
 library code_story_2013;
 
 import 'dart:io';
-import 'dart:json';
+import 'dart:async';
+import 'dart:json' as JSON;
 import 'dart:math';
 import 'package:decimal/decimal.dart';
 
@@ -293,7 +294,7 @@ class CompositeOrder extends Order {
   final List<Order> _orders;
   CompositeOrder(List<Order> orders) : super('composite', orders.first.depart, orders.last.depart + orders.last.duree - orders.first.depart, Enonce2Handler.computePrix(orders)), this._orders = orders;
   List<Order> get path => _orders;
-  String toString() => Strings.join(_orders.map((e) => e.toString()), ', ');
+  String toString() => Strings.join(_orders.mappedBy((e) => e.toString()), ', ');
 }
 String lastEnonce2 = "";
 class LastEnonce2GetHandler extends Handler {
@@ -315,7 +316,7 @@ class Enonce2Handler extends Handler {
       lastEnonce2 = content;
 
       try {
-        final List<Order> orders = mesure('$queryId : read JSON', () => deserialize(content));
+        final Iterable<Order> orders = mesure('$queryId : read JSON', () => deserialize(content));
         print('$queryId : received optimize request with ${orders.length} orders');
         final List<Order> bestTrip = mesure('$queryId : findBestTrip', () => findBestTrip(orders, queryId));
 
@@ -333,15 +334,15 @@ class Enonce2Handler extends Handler {
     });
   }
 
-  List<Order> deserialize(String json) => JSON.parse(json).map((e) => new Order(e['VOL'], e['DEPART'], e['DUREE'], e['PRIX']));
+  Iterable<Order> deserialize(String json) => (JSON.parse(json) as List).mappedBy((e) => new Order(e['VOL'], e['DEPART'], e['DUREE'], e['PRIX']));
   String getResultAsString(List<Order> orders) => JSON.stringify({
     "gain" : computePrix(orders),
-    "path" : orders.map((e) => e.vol),
+    "path" : orders.mappedBy((e) => e.vol),
   });
 
   static int computePrix(List<Order> trip) => trip.reduce(0, (int previousValue, e) => previousValue + e.prix);
 
-  List<Order> findBestTrip(List<Order> _orders, [int queryId = 0]) {
+  List<Order> findBestTrip(Iterable<Order> _orders, [int queryId = 0]) {
     if (_orders.isEmpty) return [];
 
     List<Order> orders = mesure('$queryId : copy list', () => new List<Order>.from(_orders));
@@ -367,7 +368,7 @@ class Enonce2Handler extends Handler {
       // search cleanables : order with arrivee before depart
 
       // compose cleanable with orders starting at depart
-      if (orders.some((o) => o.arrivee <= depart)) {
+      if (orders.any((o) => o.arrivee <= depart)) {
         final notCleanables = new List<Order>();
         final cleanables = new List<Order>();
         for (int j = 0; j < startIndex; j++) {
@@ -383,10 +384,10 @@ class Enonce2Handler extends Handler {
         final bestBeforeLastDepart = _findBestOrder(cleanables);
 
         // compose new orders
-        final newComposites = orders.getRange(startIndex, endIndex - startIndex).map((o) => new CompositeOrder(new List<Order>.from(bestBeforeLastDepart.path)..addAll(o.path)));
+        final newComposites = orders.getRange(startIndex, endIndex - startIndex).mappedBy((o) => new CompositeOrder(new List<Order>.from(bestBeforeLastDepart.path)..addAll(o.path)));
 
         // redefine orders
-        orders = new List<Order>(notCleanables.length + 1 + newComposites.length + (orders.length - endIndex))
+        orders = new List<Order>.fixedLength(notCleanables.length + 1 + newComposites.length + (orders.length - endIndex))
             ..setRange(0, notCleanables.length,  notCleanables)
             ..[notCleanables.length] = bestBeforeLastDepart
             ..setRange(notCleanables.length + 1, newComposites.length, newComposites)
@@ -427,7 +428,7 @@ Future<String> readStreamAsString(InputStream stream) {
   sis
     ..onData = () { sb.add(sis.read()); }
     ..onClosed = () { completer.complete(sb.toString()); }
-    ..onError = (e) { completer.completeException(e); };
+    ..onError = (e) { completer.completeError(e); };
   return completer.future;
 }
 

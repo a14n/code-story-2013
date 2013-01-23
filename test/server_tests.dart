@@ -92,6 +92,7 @@ main() {
       'q=1,5*4': '6',
       'q=((1,1+2)+3,14+4+(5+6+7)+(8+9+10)*4267387833344334647677634)/2*553344300034334349999000': '31878018903828899277492024491376690701584023926880',
       'q=(-1)+(1)': '0',
+      'q=1,0000000000000000000000000000000000000000000000001*1,0000000000000000000000000000000000000000000000001': '1,00000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000001',
     };
     map.forEach((question, answer){
       if(answer != null){
@@ -115,11 +116,12 @@ main() {
     final q = new Enonce2Handler();
     final orders = new List<Order>()
         ..add(new Order("MONAD42", 0, 5, 10))
+        ..add(new Order("MONAD42", 0, 6, 10))
         ..add(new Order("META18", 3, 7, 14))
         ..add(new Order("LEGACY01", 5, 9, 8))
         ..add(new Order("YAGNI17", 5, 9, 7))
         ;
-    expect(Strings.join(q.findBestTrip(orders).map((e)=>e.vol), ', '), equals("MONAD42, LEGACY01"));
+    expect(Strings.join(q.findBestTrip(orders).mappedBy((e) => e.vol), ', '), equals("MONAD42, LEGACY01"));
   });
   test('q8', () {
     final q = new Q8Handler();
